@@ -1,0 +1,990 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rich Pig Finanças - Seu Controle Financeiro Pessoal</title>
+  
+  <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+  
+  <!-- Google Fonts: Plus Jakarta Sans & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Chart.js para Gráficos Interativos de Desempenho -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+
+  <!-- Estilos Customizados -->
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+  <!-- ========================================================
+       TELA DE BLOQUEIO / SENHA DE ACESSO (LOCK SCREEN)
+       ======================================================== -->
+  <div id="lock-screen" class="lock-screen-overlay hidden-lock">
+    <div class="lock-card">
+      <div style="width: 84px; height: 84px; margin: 0 auto 1.25rem auto;">
+        <img src="assets/pig-logo.svg" alt="Rich Pig" style="width: 100%; height: 100%;">
+      </div>
+      <h2 class="font-bold text-2xl" style="margin-bottom: 0.25rem;">Rich Pig Finanças</h2>
+      <p class="text-secondary text-sm" style="margin-bottom: 1.5rem;">Seus dados financeiros estão protegidos.</p>
+      
+      <div class="form-group" style="text-align: left;">
+        <label class="form-label" for="lock-password-input">Digite sua senha de acesso:</label>
+        <input type="password" id="lock-password-input" class="form-control" placeholder="••••••••" autocomplete="current-password">
+      </div>
+
+      <div id="lock-error-msg" style="color: var(--expense-color); font-size: 0.8rem; font-weight: 600; min-height: 20px; margin-bottom: 0.75rem;"></div>
+
+      <button class="btn btn-primary" style="width: 100%; margin-bottom: 1rem;" onclick="RichPigSecurity.tryUnlock(document.getElementById('lock-password-input').value)">
+        Desbloquear Aplicação 🔓
+      </button>
+
+      <div style="display: flex; justify-content: center; gap: 1rem;">
+        <button class="btn-privacy text-xs" onclick="RichPigSecurity.showPasswordHint()">
+          Ver dica de senha
+        </button>
+      </div>
+      <div id="lock-hint-display" class="text-xs text-gold" style="margin-top: 0.5rem; font-weight: 600;"></div>
+    </div>
+  </div>
+
+  <!-- ========================================================
+       CABEÇALHO PRINCIPAL (HEADER)
+       ======================================================== -->
+  <header class="main-header">
+    <div class="header-content">
+      
+      <!-- LOGO + NOME + TÍTULO -->
+      <div class="brand-section" onclick="RichPigApp.switchTab('dashboard')">
+        <div class="pig-logo-wrap">
+          <img src="assets/pig-logo.svg" alt="Rich Pig Finanças" style="width: 100%; height: 100%;">
+        </div>
+        <div class="brand-info">
+          <h1>Rich Pig Finanças</h1>
+          <p>Seu Controle Financeiro Pessoal</p>
+        </div>
+      </div>
+
+      <!-- SALDO ATUAL COM PRIVACIDADE E CORES -->
+      <div class="header-balance-card">
+        <div>
+          <div class="balance-title">Saldo Atual</div>
+          <div class="balance-value-row">
+            <span id="header-balance-amount" class="balance-amount positive">R$ 0,00</span>
+            <!-- Botão de Ocultar/Exibir Saldo (Olho aberto/fechado) -->
+            <button id="btn-toggle-privacy" class="btn-privacy" title="Ocultar/Exibir Saldo">
+              <span style="font-size: 1.15rem;">👁️</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- AÇÕES DO TOPO: TEMA CLARO/ESCURO & BLOQUEIO -->
+      <div class="header-actions">
+        <button id="btn-toggle-theme" class="btn-icon" title="Alternar Modo Claro / Escuro">
+          🌙
+        </button>
+        <button id="btn-header-lock" class="btn-icon" title="Bloquear Aplicação">
+          🔒
+        </button>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- ========================================================
+       BARRA DE NAVEGAÇÃO DE ABAS
+       ======================================================== -->
+  <nav class="nav-tabs-wrapper">
+    <div class="nav-tabs">
+      <button class="nav-tab-btn active" data-tab="dashboard">
+        <span>📊</span> Dashboard
+      </button>
+      <button class="nav-tab-btn" data-tab="transactions">
+        <span>💸</span> Lançamentos
+      </button>
+      <button class="nav-tab-btn" data-tab="investments">
+        <span>📈</span> Investimentos
+      </button>
+      <button class="nav-tab-btn" data-tab="loans">
+        <span>🏦</span> Financiamentos & Empréstimos
+      </button>
+      <button class="nav-tab-btn" data-tab="settings">
+        <span>⚙️</span> Configurações & Backup
+      </button>
+    </div>
+  </nav>
+
+  <!-- ========================================================
+       CONTEÚDO PRINCIPAL (APP CONTAINER)
+       ======================================================== -->
+  <main class="app-container">
+
+    <!-- ======================================================
+         ABA 1: DASHBOARD INICIAL (OVERVIEW E GRÁFICOS)
+         ====================================================== -->
+    <section id="tab-dashboard" class="tab-pane">
+      
+      <!-- CARDS DE MÉTRICAS GERAIS -->
+      <div class="metrics-grid">
+        <!-- Saldo Geral -->
+        <div class="metric-card">
+          <div class="metric-top">
+            <span class="metric-label">Saldo Geral Líquido</span>
+            <div class="metric-icon-wrap" style="background: var(--income-bg); color: var(--income-color);">💰</div>
+          </div>
+          <div id="dash-global-balance" class="metric-value text-income">R$ 0,00</div>
+          <div class="metric-footer">Disponível em contas e carteira</div>
+        </div>
+
+        <!-- Receitas do Mês -->
+        <div class="metric-card">
+          <div class="metric-top">
+            <span class="metric-label">Receitas do Mês</span>
+            <div class="metric-icon-wrap" style="background: var(--income-bg); color: var(--income-color);">▲</div>
+          </div>
+          <div id="dash-monthly-income" class="metric-value text-income">R$ 0,00</div>
+          <div class="metric-footer">Entradas contabilizadas</div>
+        </div>
+
+        <!-- Despesas do Mês -->
+        <div class="metric-card">
+          <div class="metric-top">
+            <span class="metric-label">Despesas do Mês</span>
+            <div class="metric-icon-wrap" style="background: var(--expense-bg); color: var(--expense-color);">▼</div>
+          </div>
+          <div id="dash-monthly-expense" class="metric-value text-expense">R$ 0,00</div>
+          <div class="metric-footer">Saídas e custos do período</div>
+        </div>
+
+        <!-- Taxa de Poupança -->
+        <div class="metric-card">
+          <div class="metric-top">
+            <span class="metric-label">Taxa de Poupança</span>
+            <div class="metric-icon-wrap" style="background: var(--accent-gold-light); color: var(--accent-gold);">🐷</div>
+          </div>
+          <div id="dash-savings-rate" class="metric-value text-gold">0.0%</div>
+          <div id="dash-savings-amount" class="metric-footer">R$ 0,00 poupados</div>
+        </div>
+
+        <!-- Total Investido -->
+        <div class="metric-card">
+          <div class="metric-top">
+            <span class="metric-label">Total Investido</span>
+            <div class="metric-icon-wrap" style="background: var(--invest-bg); color: var(--invest-color);">📈</div>
+          </div>
+          <div id="dash-invested-total" class="metric-value text-invest">R$ 0,00</div>
+          <div class="metric-footer">Patrimônio em ativos</div>
+        </div>
+
+        <!-- Dívidas / Financiamentos -->
+        <div class="metric-card">
+          <div class="metric-top">
+            <span class="metric-label">Saldo Financiamentos</span>
+            <div class="metric-icon-wrap" style="background: var(--loan-bg); color: var(--loan-color);">🏦</div>
+          </div>
+          <div id="dash-debt-total" class="metric-value text-loan">R$ 0,00</div>
+          <div class="metric-footer">Saldo devedor total</div>
+        </div>
+
+        <!-- Patrimônio Líquido Real -->
+        <div class="metric-card">
+          <div class="metric-top">
+            <span class="metric-label">Patrimônio Líquido Real</span>
+            <div class="metric-icon-wrap" style="background: var(--bg-subtle); color: var(--text-primary);">💎</div>
+          </div>
+          <div id="dash-net-worth" class="metric-value text-income">R$ 0,00</div>
+          <div class="metric-footer">Ativos somados − Passivos</div>
+        </div>
+      </div>
+
+      <!-- GRÁFICOS DE DESEMPENHO -->
+      <div class="charts-grid">
+        
+        <!-- Gráfico 1: Fluxo de Caixa Mensal -->
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title"><span>📊</span> Fluxo de Caixa Mensal (Receitas x Despesas)</h3>
+          </div>
+          <div class="chart-wrapper">
+            <canvas id="chart-cash-flow"></canvas>
+          </div>
+        </div>
+
+        <!-- Gráfico 2: Despesas por Categoria -->
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title"><span>🍩</span> Despesas por Categoria</h3>
+          </div>
+          <div class="chart-wrapper">
+            <canvas id="chart-categories-donut"></canvas>
+          </div>
+        </div>
+
+        <!-- Gráfico 3: Evolução Patrimonial -->
+        <div class="card" style="grid-column: 1 / -1;">
+          <div class="card-header">
+            <h3 class="card-title"><span>📈</span> Trajetória e Evolução do Patrimônio Líquido</h3>
+          </div>
+          <div class="chart-wrapper" style="height: 260px;">
+            <canvas id="chart-net-worth"></canvas>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- LINHA DE ALERTAS E AÇÕES RÁPIDAS -->
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.25rem; margin-top: 1.5rem;">
+        
+        <!-- Próximos Vencimentos -->
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title"><span>⏰</span> Vencimentos nos Próximos 7 Dias</h3>
+          </div>
+          <div id="dash-upcoming-bills">
+            <!-- Preenchido dinamicamente -->
+          </div>
+        </div>
+
+        <!-- Últimas Transações -->
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title"><span>⚡</span> Últimas Movimentações</h3>
+            <button class="btn btn-secondary text-xs" onclick="RichPigApp.switchTab('transactions')">
+              Ver Todos
+            </button>
+          </div>
+          <div id="dash-recent-transactions">
+            <!-- Preenchido dinamicamente -->
+          </div>
+        </div>
+
+      </div>
+
+    </section>
+
+    <!-- ======================================================
+         ABA 2: PÁGINA DE LANÇAMENTOS (RECEITAS EM VERDE / DESPESAS EM VERMELHO)
+         ====================================================== -->
+    <section id="tab-transactions" class="tab-pane" style="display: none;">
+      
+      <!-- TOPO COM NAVEGAÇÃO DE MÊS E BOTÕES DE AÇÃO -->
+      <div class="card" style="margin-top: 1.5rem; margin-bottom: 1.25rem;">
+        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+          
+          <!-- Controles de Mês -->
+          <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <button class="btn btn-secondary text-sm" style="padding: 0.5rem 0.85rem;" onclick="RichPigTransactions.setMonthFilter(-1)" title="Mês Anterior">
+              ◀
+            </button>
+            <span id="current-month-display" class="font-bold text-lg" style="min-width: 170px; text-align: center;">
+              Novembro de 2026
+            </span>
+            <button class="btn btn-secondary text-sm" style="padding: 0.5rem 0.85rem;" onclick="RichPigTransactions.setMonthFilter(1)" title="Próximo Mês">
+              ▶
+            </button>
+            <button class="btn btn-secondary text-xs" onclick="RichPigTransactions.setMonthFilter(0)" title="Voltar ao Mês Atual">
+              Hoje
+            </button>
+            <button class="btn btn-secondary text-xs" onclick="RichPigTransactions.toggleViewAllMonths()">
+              Ver Todos
+            </button>
+          </div>
+
+          <!-- Botões Rápidos para Nova Receita ou Nova Despesa -->
+          <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+            <button class="btn btn-primary" onclick="RichPigApp.openTransactionModal('income')">
+              <span>+</span> 🟢 Nova Receita
+            </button>
+            <button class="btn btn-danger" onclick="RichPigApp.openTransactionModal('expense')">
+              <span>+</span> 🔴 Nova Despesa
+            </button>
+          </div>
+
+        </div>
+
+        <!-- RESUMO DO MÊS FILTRADO -->
+        <div style="display: flex; gap: 1.5rem; flex-wrap: wrap; margin-top: 1.25rem; padding-top: 1rem; border-top: 1px solid var(--border-color);">
+          <div>
+            <span class="text-xs text-muted font-bold text-uppercase">Receitas:</span>
+            <div id="tx-summary-income" class="font-bold text-lg text-income">R$ 0,00</div>
+          </div>
+          <div>
+            <span class="text-xs text-muted font-bold text-uppercase">Despesas:</span>
+            <div id="tx-summary-expense" class="font-bold text-lg text-expense">R$ 0,00</div>
+          </div>
+          <div>
+            <span class="text-xs text-muted font-bold text-uppercase">Balanço do Período:</span>
+            <div id="tx-summary-balance" class="font-bold text-lg text-income">R$ 0,00</div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- BARRA DE FILTROS E BUSCA -->
+      <div class="card" style="margin-bottom: 1.25rem; padding: 1rem 1.25rem;">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0.75rem; align-items: center;">
+          
+          <div>
+            <input type="text" id="tx-search-input" class="form-control" placeholder="🔍 Buscar por descrição, valor...">
+          </div>
+
+          <div>
+            <select id="filter-tx-type" class="form-control">
+              <option value="all">Todos os Tipos</option>
+              <option value="income">🟢 Somente Receitas</option>
+              <option value="expense">🔴 Somente Despesas</option>
+            </select>
+          </div>
+
+          <div>
+            <select id="filter-tx-category" class="form-control">
+              <option value="all">Todas as Categorias</option>
+            </select>
+          </div>
+
+          <div>
+            <select id="filter-tx-status" class="form-control">
+              <option value="all">Todos os Status</option>
+              <option value="paid">✓ Pagos / Recebidos</option>
+              <option value="pending">⏳ Pendentes</option>
+            </select>
+          </div>
+
+          <div>
+            <select id="filter-tx-sort" class="form-control">
+              <option value="date_desc">📅 Mais recentes primeiro</option>
+              <option value="date_asc">📅 Mais antigas primeiro</option>
+              <option value="amount_desc">💰 Maior valor</option>
+              <option value="amount_asc">💰 Menor valor</option>
+            </select>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- LISTA DE LANÇAMENTOS (RECEITAS EM VERDE / DESPESAS EM VERMELHO) -->
+      <div id="transactions-list-container">
+        <!-- Preenchido dinamicamente com as classes de cores solicitadas -->
+      </div>
+
+    </section>
+
+    <!-- ======================================================
+         ABA 3: PÁGINA DE INVESTIMENTOS
+         ====================================================== -->
+    <section id="tab-investments" class="tab-pane" style="display: none;">
+      
+      <!-- CARDS DE RESUMO DE CARTEIRA -->
+      <div class="metrics-grid">
+        <div class="metric-card">
+          <div class="metric-top">
+            <span class="metric-label">Patrimônio Investido Atual</span>
+            <div class="metric-icon-wrap" style="background: var(--invest-bg); color: var(--invest-color);">💼</div>
+          </div>
+          <div id="inv-total-current" class="metric-value text-invest">R$ 0,00</div>
+          <div class="metric-footer">Valor de mercado dos ativos</div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-top">
+            <span class="metric-label">Total Aportado</span>
+            <div class="metric-icon-wrap" style="background: var(--bg-subtle);">💵</div>
+          </div>
+          <div id="inv-total-invested" class="metric-value">R$ 0,00</div>
+          <div class="metric-footer">Custo histórico de aquisição</div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-top">
+            <span class="metric-label">Lucro / Rendimento</span>
+            <div class="metric-icon-wrap" style="background: var(--income-bg); color: var(--income-color);">📈</div>
+          </div>
+          <div id="inv-total-profit" class="metric-value text-income">+ R$ 0,00</div>
+          <div id="inv-profit-pct" class="metric-footer">+0.00% acumulado</div>
+        </div>
+      </div>
+
+      <!-- ALOCAÇÃO E SIMULADOR DE JUROS COMPOSTOS -->
+      <div class="charts-grid">
+        
+        <!-- Gráfico de Alocação de Ativos -->
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title"><span>🥧</span> Alocação por Classe de Ativos</h3>
+            <button class="btn btn-primary text-xs" onclick="RichPigApp.openInvestmentModal()">
+              + Novo Ativo
+            </button>
+          </div>
+          <div class="chart-wrapper">
+            <canvas id="chart-investments-allocation"></canvas>
+          </div>
+        </div>
+
+        <!-- SIMULADOR INTERATIVO DE JUROS COMPOSTOS -->
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title"><span>🔮</span> Simulador de Juros Compostos (Bola de Neve)</h3>
+          </div>
+          
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 1rem;">
+            <div>
+              <label class="form-label">Aporte Inicial (R$)</label>
+              <input type="number" id="sim-initial-amount" class="form-control" value="10000" oninput="RichPigInvestments.runSimulatorUI()">
+            </div>
+            <div>
+              <label class="form-label">Aporte Mensal (R$)</label>
+              <input type="number" id="sim-monthly-amount" class="form-control" value="1000" oninput="RichPigInvestments.runSimulatorUI()">
+            </div>
+            <div>
+              <label class="form-label">Taxa Anual (% a.a.)</label>
+              <input type="number" id="sim-annual-rate" class="form-control" value="12" step="0.5" oninput="RichPigInvestments.runSimulatorUI()">
+            </div>
+            <div>
+              <label class="form-label">Prazo (Anos)</label>
+              <input type="number" id="sim-years" class="form-control" value="10" min="1" max="40" oninput="RichPigInvestments.runSimulatorUI()">
+            </div>
+          </div>
+
+          <!-- Métricas do Simulador -->
+          <div style="background: var(--bg-subtle); border-radius: var(--radius-md); padding: 1rem; margin-bottom: 1rem;">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 0.75rem;">
+              <div>
+                <div class="text-xs text-muted">Total Acumulado</div>
+                <div id="sim-result-total" class="font-bold text-base text-income">R$ 0,00</div>
+              </div>
+              <div>
+                <div class="text-xs text-muted">Total Investido</div>
+                <div id="sim-result-invested" class="font-bold text-base">R$ 0,00</div>
+              </div>
+              <div>
+                <div class="text-xs text-muted">Ganho em Juros</div>
+                <div id="sim-result-interest" class="font-bold text-base text-gold">R$ 0,00</div>
+              </div>
+              <div>
+                <div class="text-xs text-muted">Renda Mensal Estimada</div>
+                <div id="sim-result-passive" class="font-bold text-base text-invest">R$ 0,00 / mês</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="chart-wrapper" style="height: 180px;">
+            <canvas id="chart-simulator-compound"></canvas>
+          </div>
+
+        </div>
+
+      </div>
+
+      <!-- LISTA DE ATIVOS DA CARTEIRA -->
+      <div style="margin-top: 1.5rem;">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
+          <h3 class="font-bold text-lg">Seus Ativos Cadastrados</h3>
+          <button class="btn btn-primary text-sm" onclick="RichPigApp.openInvestmentModal()">
+            + Adicionar Investimento
+          </button>
+        </div>
+        <div id="investments-list-container">
+          <!-- Preenchido dinamicamente -->
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ======================================================
+         ABA 4: PÁGINA DE FINANCIAMENTOS E EMPRÉSTIMOS
+         ====================================================== -->
+    <section id="tab-loans" class="tab-pane" style="display: none;">
+      
+      <!-- CARDS DE OVERVIEW DE DÍVIDAS -->
+      <div class="metrics-grid">
+        <div class="metric-card">
+          <div class="metric-top">
+            <span class="metric-label">Saldo Devedor Total</span>
+            <div class="metric-icon-wrap" style="background: var(--expense-bg); color: var(--expense-color);">🏦</div>
+          </div>
+          <div id="loans-total-debt" class="metric-value text-expense">R$ 0,00</div>
+          <div class="metric-footer">Total a ser quitado</div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-top">
+            <span class="metric-label">Parcelas no Mês</span>
+            <div class="metric-icon-wrap" style="background: var(--loan-bg); color: var(--loan-color);">📅</div>
+          </div>
+          <div id="loans-total-monthly" class="metric-value text-loan">R$ 0,00 / mês</div>
+          <div class="metric-footer">Comprometimento de renda</div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-top">
+            <span class="metric-label">Progresso Geral de Quitação</span>
+            <div class="metric-icon-wrap" style="background: var(--income-bg); color: var(--income-color);">🎯</div>
+          </div>
+          <div id="loans-overall-progress" class="metric-value text-income">0% Quitado</div>
+          <div class="metric-footer">Rumo à liberdade financeira</div>
+        </div>
+      </div>
+
+      <!-- SIMULADOR DE AMORTIZAÇÃO EXTRAORDINÁRIA E GRÁFICO -->
+      <div class="charts-grid" id="amortization-simulator-section">
+        
+        <!-- Simulador de Amortização Extraordinária (SAC / Price) -->
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title"><span>⚡</span> Simulador de Amortização Extraordinária</h3>
+          </div>
+          <p class="text-secondary text-sm" style="margin-bottom: 1rem;">
+            Descubra quanto tempo ou dinheiro você economiza ao abater um valor direto no saldo devedor do seu financiamento.
+          </p>
+
+          <div class="form-group">
+            <label class="form-label">Selecione o Financiamento:</label>
+            <select id="amort-loan-select" class="form-control" onchange="RichPigLoans.runAmortizationSimulatorUI()">
+              <!-- Preenchido dinamicamente -->
+            </select>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 1rem;">
+            <div>
+              <label class="form-label">Valor da Amortização (R$):</label>
+              <input type="number" id="amort-extra-amount" class="form-control" value="5000" oninput="RichPigLoans.runAmortizationSimulatorUI()">
+            </div>
+            <div>
+              <label class="form-label">Modalidade de Amortização:</label>
+              <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem;">
+                <label style="font-size: 0.85rem; display: flex; align-items: center; gap: 0.25rem; cursor: pointer;">
+                  <input type="radio" name="amort-mode" value="term" checked onchange="RichPigLoans.runAmortizationSimulatorUI()"> Reduzir Prazo
+                </label>
+                <label style="font-size: 0.85rem; display: flex; align-items: center; gap: 0.25rem; cursor: pointer;">
+                  <input type="radio" name="amort-mode" value="installment" onchange="RichPigLoans.runAmortizationSimulatorUI()"> Reduzir Parcela
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Display de Resultados do Simulador -->
+          <div id="amort-results-display">
+            <!-- Preenchido pelo script -->
+          </div>
+        </div>
+
+        <!-- Gráfico de Quitação -->
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title"><span>📊</span> Proporção Quitado vs Devedor</h3>
+            <button class="btn btn-primary text-xs" onclick="RichPigApp.openLoanModal()">
+              + Novo Financiamento
+            </button>
+          </div>
+          <div class="chart-wrapper">
+            <canvas id="chart-loans-progress"></canvas>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- LISTA DE CONTRATOS DE FINANCIAMENTOS -->
+      <div style="margin-top: 1.5rem;">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
+          <h3 class="font-bold text-lg">Contratos Ativos</h3>
+          <button class="btn btn-primary text-sm" onclick="RichPigApp.openLoanModal()">
+            + Cadastrar Financiamento
+          </button>
+        </div>
+        <div id="loans-list-container">
+          <!-- Preenchido dinamicamente -->
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ======================================================
+         ABA 5: CONFIGURAÇÕES, SEGURANÇA E BACKUP
+         ====================================================== -->
+    <section id="tab-settings" class="tab-pane" style="display: none;">
+      
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 1.25rem; margin-top: 1.5rem;">
+        
+        <!-- CARD DE SEGURANÇA / SENHA DE ACESSO -->
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title"><span>🔒</span> Senha de Acesso aos Dados</h3>
+          </div>
+          <p class="text-secondary text-sm" style="margin-bottom: 1rem;">
+            Proteja suas finanças. Ao cadastrar uma senha, o Rich Pig solicitará o PIN para desbloquear os dados sempre que você abrir o app.
+          </p>
+
+          <div style="margin-bottom: 1.25rem;">
+            <div id="settings-password-status" class="font-bold text-gold" style="margin-bottom: 0.5rem;">
+              ⚠️ Nenhuma senha definida (Acesso livre)
+            </div>
+            <button class="btn btn-secondary text-xs" onclick="RichPigApp.handleRemovePassword()">
+              Desativar Senha Atual
+            </button>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Nova Senha ou PIN:</label>
+            <input type="password" id="settings-new-password" class="form-control" placeholder="Mínimo 4 caracteres">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Confirmar Senha:</label>
+            <input type="password" id="settings-confirm-password" class="form-control" placeholder="Repita a senha">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Dica de Senha (Opcional):</label>
+            <input type="text" id="settings-password-hint" class="form-control" placeholder="Ex: Nome do primeiro pet">
+          </div>
+
+          <button class="btn btn-primary" onclick="RichPigApp.handleSaveNewPassword()">
+            Salvar Senha de Proteção 🔒
+          </button>
+        </div>
+
+        <!-- CARD DE IMPORTAR / EXPORTAR DADOS (JSON E CSV) -->
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title"><span>💾</span> Backup e Exportação (JSON / CSV)</h3>
+          </div>
+          <p class="text-secondary text-sm" style="margin-bottom: 1.25rem;">
+            Exporte seus dados para backup completo ou planilhas Excel / Google Planilhas.
+          </p>
+
+          <!-- Exportações -->
+          <div style="margin-bottom: 1.5rem;">
+            <h4 class="font-bold text-sm" style="margin-bottom: 0.5rem;">Exportar Dados:</h4>
+            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+              <button class="btn btn-secondary text-xs" onclick="RichPigExportImport.exportJSON()">
+                📦 Backup Completo (JSON)
+              </button>
+              <button class="btn btn-secondary text-xs" onclick="RichPigExportImport.exportTransactionsCSV()">
+                📊 Lançamentos (CSV Excel)
+              </button>
+              <button class="btn btn-secondary text-xs" onclick="RichPigExportImport.exportInvestmentsCSV()">
+                📈 Investimentos (CSV)
+              </button>
+            </div>
+          </div>
+
+          <!-- Importações -->
+          <div style="margin-bottom: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--border-color);">
+            <h4 class="font-bold text-sm" style="margin-bottom: 0.5rem;">Restaurar ou Importar:</h4>
+            
+            <div style="margin-bottom: 0.75rem;">
+              <label class="form-label">Restaurar Backup JSON:</label>
+              <input type="file" id="file-import-json" accept=".json" class="form-control" onchange="RichPigExportImport.importJSONFile(this.files[0])">
+            </div>
+
+            <div>
+              <label class="form-label">Importar Lançamentos de Planilha CSV:</label>
+              <input type="file" id="file-import-csv" accept=".csv" class="form-control" onchange="RichPigExportImport.importCSVFile(this.files[0])">
+            </div>
+          </div>
+
+          <!-- Dados de Exemplo e Reset -->
+          <div style="padding-top: 1rem; border-top: 1px solid var(--border-color); display: flex; gap: 0.75rem; flex-wrap: wrap;">
+            <button class="btn btn-secondary text-xs" onclick="RichPigApp.handleLoadSampleData()">
+              🐷 Carregar Dados de Demonstração
+            </button>
+            <button class="btn btn-danger text-xs" onclick="RichPigApp.handleResetAllData()">
+              🗑️ Limpar Todos os Dados
+            </button>
+          </div>
+
+        </div>
+
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- ========================================================
+       MODAL DE LANÇAMENTOS (RECEITA / DESPESA COM RECORRÊNCIA ATÉ 36 MESES)
+       ======================================================== -->
+  <div id="modal-transaction" class="modal-overlay">
+    <div class="modal-container">
+      <div class="modal-header">
+        <h3 id="modal-tx-title" class="font-bold text-lg">Novo Lançamento</h3>
+        <button class="btn-table-action" onclick="RichPigApp.closeModal('modal-transaction')">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <input type="hidden" id="modal-tx-id">
+        <input type="hidden" id="modal-tx-type" value="expense">
+
+        <!-- Alternador Visual Receita (Verde) x Despesa (Vermelho) -->
+        <div class="type-toggle-group">
+          <button type="button" id="btn-type-income" class="type-toggle-btn" onclick="RichPigApp.setModalTransactionType('income')">
+            🟢 Receita
+          </button>
+          <button type="button" id="btn-type-expense" class="type-toggle-btn active-expense" onclick="RichPigApp.setModalTransactionType('expense')">
+            🔴 Despesa
+          </button>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="modal-tx-desc">Descrição / Nome:</label>
+          <input type="text" id="modal-tx-desc" class="form-control" placeholder="Ex: Salário, Aluguel, Supermercado..." required>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+          <div class="form-group">
+            <label class="form-label" for="modal-tx-amount">Valor (R$):</label>
+            <input type="number" id="modal-tx-amount" class="form-control" placeholder="0,00" step="0.01" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="modal-tx-date">Data:</label>
+            <input type="date" id="modal-tx-date" class="form-control" required>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+          <div class="form-group">
+            <label class="form-label" for="modal-tx-category">Categoria:</label>
+            <select id="modal-tx-category" class="form-control">
+              <!-- Preenchido dinamicamente -->
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="modal-tx-method">Conta / Pagamento:</label>
+            <select id="modal-tx-method" class="form-control">
+              <option value="Conta Corrente">Conta Corrente</option>
+              <option value="Cartão de Crédito">Cartão de Crédito</option>
+              <option value="Pix">Pix</option>
+              <option value="Dinheiro">Dinheiro</option>
+              <option value="Débito Automático">Débito Automático</option>
+              <option value="Outros">Outros</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="modal-tx-status">Status do Pagamento:</label>
+          <select id="modal-tx-status" class="form-control">
+            <option value="paid">✓ Pago / Recebido</option>
+            <option value="pending">⏳ Pendente (A Pagar / A Receber)</option>
+          </select>
+        </div>
+
+        <!-- RECURSO EXPLICITAMENTE SOLICITADO: REPETIÇÃO POR ATÉ 36 MESES -->
+        <div class="recurrence-box">
+          <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font-weight: 600; font-size: 0.85rem;">
+            <input type="checkbox" id="modal-tx-recurring-check">
+            <span>🔁 Repetir lançamento por até 36 meses (Recorrência)</span>
+          </label>
+
+          <div id="modal-tx-recurrence-panel" style="display: none; margin-top: 0.85rem;">
+            
+            <div style="display: flex; justify-content: space-between; font-size: 0.82rem; margin-bottom: 0.35rem;">
+              <span>Repetir por:</span>
+              <strong id="modal-tx-recurrence-months-val" class="text-primary font-bold">12 meses</strong>
+            </div>
+
+            <!-- Slider de 2 até 36 meses -->
+            <input type="range" id="modal-tx-recurrence-months" min="2" max="36" value="12" class="form-control" style="padding: 0; cursor: pointer;">
+            
+            <div style="display: flex; justify-content: space-between; font-size: 0.72rem; color: var(--text-muted); margin-bottom: 0.75rem;">
+              <span>2 meses</span>
+              <span>12 meses</span>
+              <span>24 meses</span>
+              <span>36 meses</span>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 0;">
+              <label class="form-label">Modo de repetição:</label>
+              <select id="modal-tx-recurrence-mode" class="form-control text-xs">
+                <option value="fixed">Repetir valor cheio todo mês (Ex: Aluguel, Salário, Mensalidade)</option>
+                <option value="installment">Dividir o valor total pelo número de parcelas (Parcelamento de compra)</option>
+              </select>
+            </div>
+
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-top: 1rem; margin-bottom: 0;">
+          <label class="form-label" for="modal-tx-notes">Observações (Opcional):</label>
+          <input type="text" id="modal-tx-notes" class="form-control" placeholder="Anotações extras...">
+        </div>
+
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="RichPigApp.closeModal('modal-transaction')">Cancelar</button>
+        <button class="btn btn-primary" onclick="RichPigApp.handleSaveTransaction()">Salvar Lançamento</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================
+       MODAL DE INVESTIMENTO
+       ======================================================== -->
+  <div id="modal-investment" class="modal-overlay">
+    <div class="modal-container">
+      <div class="modal-header">
+        <h3 class="font-bold text-lg">Investimento</h3>
+        <button class="btn-table-action" onclick="RichPigApp.closeModal('modal-investment')">✕</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="modal-inv-id">
+
+        <div class="form-group">
+          <label class="form-label">Nome do Ativo ou Ticker:</label>
+          <input type="text" id="modal-inv-name" class="form-control" placeholder="Ex: CDB Inter 110%, Tesouro IPCA+ 2035, HGLG11, BTC">
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+          <div class="form-group">
+            <label class="form-label">Classe / Tipo:</label>
+            <select id="modal-inv-type" class="form-control">
+              <option value="Renda Fixa">Renda Fixa (CDB / Tesouro / LCI)</option>
+              <option value="Fundos Imobiliários">Fundos Imobiliários (FIIs)</option>
+              <option value="Ações">Ações (Bolsa de Valores)</option>
+              <option value="Criptomoedas">Criptomoedas</option>
+              <option value="Reserva de Emergência">Reserva de Emergência</option>
+              <option value="Outros">Outros</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Instituição / Corretora:</label>
+            <input type="text" id="modal-inv-inst" class="form-control" placeholder="Ex: XP, Nubank, BTG, Inter">
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+          <div class="form-group">
+            <label class="form-label">Valor Aportado (R$):</label>
+            <input type="number" id="modal-inv-amount" class="form-control" placeholder="0,00" step="0.01">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Valor Atual de Mercado (R$):</label>
+            <input type="number" id="modal-inv-current" class="form-control" placeholder="0,00" step="0.01">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Rentabilidade Esperada:</label>
+          <input type="text" id="modal-inv-return" class="form-control" placeholder="Ex: 110% CDI, IPCA + 6%, 10% a.a.">
+        </div>
+
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label">Notas adicionais:</label>
+          <input type="text" id="modal-inv-notes" class="form-control" placeholder="Ex: Vencimento em 2028, liquidez diária...">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="RichPigApp.closeModal('modal-investment')">Cancelar</button>
+        <button class="btn btn-primary" onclick="RichPigApp.handleSaveInvestment()">Salvar Ativo</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================
+       MODAL DE FINANCIAMENTO
+       ======================================================== -->
+  <div id="modal-loan" class="modal-overlay">
+    <div class="modal-container">
+      <div class="modal-header">
+        <h3 class="font-bold text-lg">Contrato de Financiamento / Empréstimo</h3>
+        <button class="btn-table-action" onclick="RichPigApp.closeModal('modal-loan')">✕</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="modal-loan-id">
+
+        <div class="form-group">
+          <label class="form-label">Nome ou Identificação do Contrato:</label>
+          <input type="text" id="modal-loan-name" class="form-control" placeholder="Ex: Financiamento Imobiliário Caixa, Carro Honda...">
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+          <div class="form-group">
+            <label class="form-label">Tipo de Dívida:</label>
+            <select id="modal-loan-type" class="form-control">
+              <option value="Imobiliário">Imobiliário (Casa / Apto)</option>
+              <option value="Veicular">Veicular (Carro / Moto)</option>
+              <option value="Consignado">Consignado</option>
+              <option value="Pessoal">Empréstimo Pessoal</option>
+              <option value="Estudantil">Estudantil (FIES)</option>
+              <option value="Outros">Outros</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Sistema de Amortização:</label>
+            <select id="modal-loan-system" class="form-control">
+              <option value="SAC">SAC (Parcelas Decrescentes)</option>
+              <option value="Price">Tabela Price (Parcelas Fixas)</option>
+              <option value="Simples">Simples / Pré-fixado</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+          <div class="form-group">
+            <label class="form-label">Valor Original Financiado (R$):</label>
+            <input type="number" id="modal-loan-initial" class="form-control" placeholder="0,00" step="0.01">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Taxa de Juros Anual (% a.a.):</label>
+            <input type="number" id="modal-loan-rate" class="form-control" placeholder="Ex: 9.5" step="0.1">
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+          <div class="form-group">
+            <label class="form-label">Total de Parcelas (Meses):</label>
+            <input type="number" id="modal-loan-total-inst" class="form-control" placeholder="360" value="360">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Parcelas já Pagas:</label>
+            <input type="number" id="modal-loan-paid-inst" class="form-control" placeholder="0" value="0">
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+          <div class="form-group">
+            <label class="form-label">Valor Atual da Parcela (R$):</label>
+            <input type="number" id="modal-loan-inst-val" class="form-control" placeholder="0,00" step="0.01">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Saldo Devedor Atual (R$):</label>
+            <input type="number" id="modal-loan-balance" class="form-control" placeholder="0,00" step="0.01">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Dia do Vencimento Mensal:</label>
+          <input type="number" id="modal-loan-due" class="form-control" placeholder="10" min="1" max="31" value="10">
+        </div>
+
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label">Observações:</label>
+          <input type="text" id="modal-loan-notes" class="form-control" placeholder="Banco, agência, condições de amortização...">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="RichPigApp.closeModal('modal-loan')">Cancelar</button>
+        <button class="btn btn-primary" onclick="RichPigApp.handleSaveLoan()">Salvar Financiamento</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONTAINER DE TOASTS -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- SCRIPTS DA APLICAÇÃO -->
+  <script src="js/state.js"></script>
+  <script src="js/security.js"></script>
+  <script src="js/charts.js"></script>
+  <script src="js/transactions.js"></script>
+  <script src="js/investments.js"></script>
+  <script src="js/loans.js"></script>
+  <script src="js/exportImport.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
